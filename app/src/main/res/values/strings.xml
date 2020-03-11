@@ -1,3 +1,12 @@
 <resources>
     <string name="app_name">PracticaCuatro</string>
+    <string name="pagoBanco">Pago directo en banco</string>
+    <string name="mostrarPagosBanco">Mostrar pagos directos</string>
+    <string name="PagosPayPal">Pagar con paypal</string>
+    <string name="mostrarPagosPayPal">Mostrar pagos con PayPal</string>
+    <string name="noDeCuenta">No. de cuenta</string>
+    <string name="nombreCompleto">Nombre completo</string>
+    <string name="montoAPagar">Monto a pagar</string>
+    <string name="correoPayPal">Correo PayPal</string>
+    <string name="depositar">Depositar</string>
 </resources>
