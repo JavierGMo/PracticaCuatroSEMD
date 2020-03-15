@@ -29,15 +29,22 @@ public class MainActivity extends AppCompatActivity {
     private LinearLayout linearLayoutInsertar;
     private Button btnPagar;
     private ListView listaDePagos;
-    private DatosPayPal pagoPayPal = new DatosPayPal(MainActivity.this);
-    private DatosPago datosPago = new DatosPago(MainActivity.this);
-    private SQLiteDatabase controlPagosDirectos = datosPago.getWritableDatabase(), controlPayPal = pagoPayPal.getWritableDatabase();
+
+    private SQLiteDatabase controlPagosDirectos, controlPayPal;
 
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        final DatosPayPal pagoPayPal = new DatosPayPal(this);
+        final DatosPago datosPago = new DatosPago(this);
+
+        controlPagosDirectos = datosPago.getWritableDatabase();
+        controlPayPal = pagoPayPal.getWritableDatabase();
+
+
+
         linearLayoutInsertar = findViewById(R.id.linearLayoutCamposDinamicos);
 
         radioGroupMaster = findViewById(R.id.radioOpcionPago);
@@ -58,31 +65,33 @@ public class MainActivity extends AppCompatActivity {
                 //listEditText = null;
                 //linearLayoutInsertar = null;
                 //linearLayoutInsertar.removeAllViews();
-                SQLiteDatabase db = null;
 
                 if(check == R.id.radioPagoBanco){
-                    mostrarCampos(View.GONE, View.VISIBLE);
                     limpiarCampos();
+                    mostrarCampos(View.GONE, View.VISIBLE);
                     Toast.makeText(MainActivity.this, "Pago en banco", Toast.LENGTH_SHORT).show();
                 }else if(check == R.id.radioMostrarPagoBanco){
                     limpiarCampos();
                     desparecerCampos();
 
-
-                    //db = datosPago.getReadableDatabase();
                     if(datosPago.checkDataBase()){
+                        Cursor c = controlPagosDirectos.rawQuery("SELECT notarjeta, nombrecompleto, monto FROM pagosdirectos;", null);
+                        ArrayList<String[]> dataControl = new ArrayList<>();
                         try{
-                            ListaPagos listaPagos = new ListaPagos(MainActivity.this, datosPago.mostrarDatos());
-                            listaDePagos.setAdapter(listaPagos);
-                            Toast.makeText(MainActivity.this, "Pagos en banco", Toast.LENGTH_SHORT).show();
+                            if(c != null){
+                                if(c.moveToFirst()){
+                                    do {
+                                        dataControl.add(new String[]{c.getString(0), c.getString(1), c.getString(2)});
+                                    }while (c.moveToNext());
+                                }
+                                c.close();
+                            }
+                            ListaPagos controladorPagos = new ListaPagos(MainActivity.this, dataControl);
+                            listaDePagos.setAdapter(controladorPagos);
                         }catch (Exception e){
                             e.printStackTrace();
                         }
-
-                    }else{
-                        Toast.makeText(MainActivity.this, "No esta disponible esta opcion", Toast.LENGTH_SHORT).show();
                     }
-
                 }else if(check == R.id.radioPagoPayPal){
                     limpiarCampos();
                     mostrarCampos(View.VISIBLE, View.GONE);
@@ -90,40 +99,28 @@ public class MainActivity extends AppCompatActivity {
                 }else if(check == R.id.radioMostarPagoPayPal){
                     limpiarCampos();
                     desparecerCampos();
-                    ArrayList<String[]> dataChida;
-                    //db = pagoPayPal.getReadableDatabase();
                     if(pagoPayPal.checkDataBase()){
+                        Cursor c = controlPayPal.rawQuery("SELECT correo, nombrecompleto, monto FROM pagospaypal;", null);
+                        ArrayList<String[]> dataControl = new ArrayList<>();
                         try{
-                            SQLiteDatabase dataB= pagoPayPal.getWritableDatabase();
-                            if(dataB != null){
-                                Cursor cu = db.query("pagospaypal", new String[]{"notarjeta", "nombrecompleto", "monto"}, null, null, null, null, null);
-                                if(cu != null){
-                                    if(cu.moveToFirst()){
-                                        dataChida = new ArrayList<String[]>();
-                                        do{
-                                            dataChida.add(new String[]{cu.getString(0), cu.getString(1), cu.getString(2)});
-                                        }while(cu.moveToNext());
-                                    }
+                            if(c != null){
+                                if(c.moveToFirst()){
+                                    do {
+                                        dataControl.add(new String[]{c.getString(0), c.getString(1), c.getString(2)});
+                                    }while (c.moveToNext());
                                 }
-                                cu.close();
+                                c.close();
                             }
-
-
-                            dataB.close();
-                            /*ListaPagos listaPagos = new ListaPagos(MainActivity.this, pagoPayPal.mostrarDatos());
-                            listaDePagos.setAdapter(listaPagos);*/
-                            Toast.makeText(MainActivity.this, "Pagos en PayPal", Toast.LENGTH_SHORT).show();
+                            ListaPagos controladorPagos = new ListaPagos(MainActivity.this, dataControl);
+                            listaDePagos.setAdapter(controladorPagos);
                         }catch (Exception e){
                             e.printStackTrace();
                         }
-
-                    }else{
-                        Toast.makeText(MainActivity.this, "No diponible pagos en PayPal", Toast.LENGTH_SHORT).show();
                     }
-
                 }
             }
         });
+        //Para guardar datos
         btnPagar.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -131,8 +128,6 @@ public class MainActivity extends AppCompatActivity {
                 String nombreTabla = "";
                 ContentValues cv = null;
                 if(edTxtMailPayPal.getText() != null && edTxtMailPayPal.getText().toString().trim() != ""){
-                    DatosPayPal pagoPayPal = new DatosPayPal(MainActivity.this);
-                    db = pagoPayPal.getWritableDatabase();
                     cv = new ContentValues();
                     cv.put("correo", edTxtMailPayPal.getText().toString());
                     cv.put("nombrecompleto", edTxtNombreCompleto.getText().toString());
@@ -144,18 +139,15 @@ public class MainActivity extends AppCompatActivity {
                         Toast.makeText(MainActivity.this, "Registro no creado", Toast.LENGTH_SHORT).show();
                     }
                 }else if(edTxtNoCuenta.getText() != null && edTxtNoCuenta.getText().toString().trim() != ""){
-                    DatosPago pagoDirecto = new DatosPago(MainActivity.this);
-                    db = pagoDirecto.getWritableDatabase();
                     cv = new ContentValues();
                     cv.put("notarjeta", edTxtNoCuenta.getText().toString());
                     cv.put("nombrecompleto", edTxtNombreCompleto.getText().toString());
                     cv.put("monto", edTxtMontoAPagar.getText().toString());
-                    if(insertarDatos(controlPagosDirectos, cv, nombreTabla)){
+                    if(insertarDatos(controlPagosDirectos, cv, "pagosdirectos")){
                         Toast.makeText(MainActivity.this, "Registro creado", Toast.LENGTH_SHORT).show();
                     }else{
                         Toast.makeText(MainActivity.this, "Registro no creado", Toast.LENGTH_SHORT).show();
                     }
-                    nombreTabla = "pagosdirectos";
                 }
 
             }
@@ -181,12 +173,15 @@ public class MainActivity extends AppCompatActivity {
         btnPagar.setVisibility(View.VISIBLE);
     }
     private boolean insertarDatos(SQLiteDatabase db, ContentValues cv, String nombreTabla){
-
+        boolean ok = false;
         if(db != null && cv != null && nombreTabla != ""){
-            db.insert(nombreTabla, null, cv);
-            return true;
+            if(db.insert(nombreTabla, null, cv) != SQLiteDatabase.CONFLICT_FAIL){
+                ok = true;
+            }else {
+                ok = false;
+            }
         }
-        return false;
+        return ok;
     }
     private ArrayList<String[]> traerDatos(SQLiteDatabase db, String nombreTabla, String[] columnasConsulta){
         ArrayList<String[]> dataChida = new ArrayList<String[]>();
